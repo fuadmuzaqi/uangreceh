@@ -1,27 +1,14 @@
 {
   "version": 2,
-  "name": "fuadeli-finance",
-  "builds": [
+  "cleanUrls": true,
+  "rewrites": [
     {
-      "src": "api/config.js",
-      "use": "@vercel/node"
+      "source": "/api/config",
+      "destination": "/api/config.js"
     },
     {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "source": "/(.*)",
+      "destination": "/public/$1"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/config",
-      "dest": "api/config.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ],
-  "env": {
-    "ACCESS_CODE": "fuadeli"
-  }
+  ]
 }
