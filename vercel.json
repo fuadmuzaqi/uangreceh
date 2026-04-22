@@ -1,6 +1,7 @@
 {
   "version": 2,
   "cleanUrls": true,
+  "framework": null,
   "rewrites": [
     { "source": "/api/auth", "destination": "/api/auth.js" },
     { "source": "/api/transactions", "destination": "/api/transactions.js" },
