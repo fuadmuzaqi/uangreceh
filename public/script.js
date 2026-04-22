@@ -27,7 +27,7 @@ async function checkAuth() {
         sessionStorage.setItem('vault_key', code);
         sessionStorage.setItem('login_time', Date.now());
         location.reload();
-    } else { alert("ACCESS DENIED"); }
+    } else { alert("AKSES DITOLAK"); }
 }
 
 async function fetchData() {
@@ -38,9 +38,18 @@ async function fetchData() {
     updateUI();
 }
 
+// FIX: Selalu format ke WIB (Asia/Jakarta)
 function formatFullDate(iso) {
     const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth()+1).padStart(2, '0')}-${d.getFullYear()} • ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return d.toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).replace(/\//g, '-').replace(',', ' •');
 }
 
 function updateUI() {
@@ -52,7 +61,7 @@ function updateUI() {
     const currentMonthLabel = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
     const currentFilter = filter.value || (months.includes(currentMonthLabel) ? currentMonthLabel : (months[0] || "Semua Waktu"));
 
-    filter.innerHTML = `<option value="Semua Waktu">ALL TIME</option>`;
+    filter.innerHTML = `<option value="Semua Waktu">SEMUA WAKTU</option>`;
     months.forEach(m => filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m.toUpperCase()}</option>`);
 
     const displayData = currentFilter === "Semua Waktu" ? transactions : transactions.filter(t => t.month === currentFilter);
@@ -89,7 +98,6 @@ function updateUI() {
     document.getElementById('total-income').innerText = 'Rp ' + inc.toLocaleString('id-ID');
     document.getElementById('total-expense').innerText = 'Rp ' + exp.toLocaleString('id-ID');
     
-    // Percent Calculation for Middle Chart
     const total = inc + exp;
     const percent = total > 0 ? Math.round((inc / total) * 100) : 0;
     document.getElementById('chart-percent').innerText = percent + '%';
@@ -100,42 +108,20 @@ function updateUI() {
 function updateChart(inc, exp) {
     const ctx = document.getElementById('financeChart').getContext('2d');
     if (myChart) myChart.destroy();
-
-    // Create Gradient
     const gradientInc = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientInc.addColorStop(0, '#10b981');
-    gradientInc.addColorStop(1, '#059669');
-
+    gradientInc.addColorStop(0, '#10b981'); gradientInc.addColorStop(1, '#059669');
     const gradientExp = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientExp.addColorStop(0, '#f43f5e');
-    gradientExp.addColorStop(1, '#e11d48');
-
+    gradientExp.addColorStop(0, '#f43f5e'); gradientExp.addColorStop(1, '#e11d48');
     const chartData = (inc === 0 && exp === 0) ? [1, 0.01] : [inc, exp];
     const colors = (inc === 0 && exp === 0) ? ['#1e293b', '#1e293b'] : [gradientInc, gradientExp];
-
     myChart = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-            datasets: [{
-                data: chartData,
-                backgroundColor: colors,
-                borderWidth: 0,
-                borderRadius: 20,
-                spacing: 10,
-                hoverOffset: 0
-            }]
-        },
-        options: {
-            cutout: '85%',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            animation: { animateRotate: true, duration: 2000 }
-        }
+        data: { datasets: [{ data: chartData, backgroundColor: colors, borderWidth: 0, borderRadius: 20, spacing: 10 }] },
+        options: { cutout: '85%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { animateRotate: true, duration: 1500 } }
     });
 }
 
-// ... CRUD Operations (saveData, deleteData, prepareEdit) tetap menggunakan versi stabil Turso Anda ...
+// ... Sisanya tetap sama (saveData, deleteData, prepareEdit) ...
 async function saveData() {
     const btn = document.getElementById('btn-save');
     const amountVal = document.getElementById('input-amount').value;
@@ -149,11 +135,11 @@ async function saveData() {
     try {
         const res = await fetch('/api/transactions', { method: isEditing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify(payload) });
         if (res.ok) { closeModal(); fetchData(); }
-    } catch (e) { alert("ERROR"); } finally { btn.disabled = false; }
+    } catch (e) { alert("GAGAL"); } finally { btn.disabled = false; }
 }
 
 async function deleteData(id) {
-    if (!confirm("DELETE?")) return;
+    if (!confirm("HAPUS?")) return;
     const code = sessionStorage.getItem('vault_key');
     await fetch('/api/transactions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify({ id }) });
     fetchData();
@@ -166,7 +152,7 @@ function prepareEdit(id) {
     document.getElementById('input-amount').value = t.amount;
     document.getElementById('input-note').value = t.note;
     document.getElementById('input-person').value = t.person;
-    document.getElementById('btn-save').innerText = "UPDATE";
+    document.getElementById('btn-save').innerText = "UPDATE DATA";
     setType(t.type);
     toggleModal();
 }
@@ -190,7 +176,7 @@ function closeModal() {
     document.getElementById('edit-id').value = "";
     document.getElementById('input-amount').value = "";
     document.getElementById('input-note').value = "";
-    document.getElementById('btn-save').innerText = "CONFIRM";
+    document.getElementById('btn-save').innerText = "SIMPAN DATA";
     toggleModal();
 }
 
