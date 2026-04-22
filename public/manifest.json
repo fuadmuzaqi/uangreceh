@@ -3,13 +3,14 @@
   "short_name": "UangReceh",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0f172a",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2344/2344132.png",
+      "src": "icon.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
