@@ -4,8 +4,7 @@ let myChart = null;
 let isEditing = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const savedKey = sessionStorage.getItem('vault_key');
-    if (savedKey) {
+    if (sessionStorage.getItem('vault_key')) {
         checkSession();
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('main-content').classList.remove('hidden');
@@ -19,23 +18,16 @@ function checkSession() {
     if (loginTime && (Date.now() - loginTime > 3600000)) logout();
 }
 
-function logout() {
-    sessionStorage.clear();
-    location.reload();
-}
+function logout() { sessionStorage.clear(); location.reload(); }
 
 async function checkAuth() {
     const code = document.getElementById('access-code').value;
-    const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
-    });
+    const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
     if (res.ok) {
         sessionStorage.setItem('vault_key', code);
         sessionStorage.setItem('login_time', Date.now());
         location.reload();
-    } else { alert("Kode akses salah!"); }
+    } else { alert("ACCESS DENIED"); }
 }
 
 async function fetchData() {
@@ -46,27 +38,22 @@ async function fetchData() {
     updateUI();
 }
 
-function formatFullDate(isoString) {
-    const d = new Date(isoString);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${day}-${month}-${year} (${hours}:${mins})`;
+function formatFullDate(iso) {
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth()+1).padStart(2, '0')}-${d.getFullYear()} • ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function updateUI() {
     const list = document.getElementById('transaction-list');
     const filter = document.getElementById('month-filter');
-    let totalInc = 0, totalExp = 0;
+    let inc = 0, exp = 0;
 
     const months = [...new Set(transactions.map(t => t.month))];
     const currentMonthLabel = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
     const currentFilter = filter.value || (months.includes(currentMonthLabel) ? currentMonthLabel : (months[0] || "Semua Waktu"));
 
-    filter.innerHTML = `<option value="Semua Waktu">Semua Waktu</option>`;
-    months.forEach(m => filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m}</option>`);
+    filter.innerHTML = `<option value="Semua Waktu">ALL TIME</option>`;
+    months.forEach(m => filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m.toUpperCase()}</option>`);
 
     const displayData = currentFilter === "Semua Waktu" ? transactions : transactions.filter(t => t.month === currentFilter);
     list.innerHTML = "";
@@ -74,96 +61,114 @@ function updateUI() {
     displayData.forEach(t => {
         const isInc = t.type === 'Pemasukan';
         const amount = Number(t.amount);
-        if (isInc) totalInc += amount; else totalExp += amount;
+        if (isInc) inc += amount; else exp += amount;
 
-        // --- TATA LETAK TRANSAKSI BARU ---
         list.innerHTML += `
-            <div class="bg-white p-4 rounded-[1.8rem] shadow-[0_4px_12px_rgba(0,0,0,0.02)] border border-slate-50 flex justify-between items-center transition-all active:scale-[0.98]">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center ${isInc ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} text-xs">
-                        ${isInc ? '➕':'➖'}
-                    </div>
-                    <div>
-                        <p class="font-bold text-[13px] text-slate-800 leading-tight">${t.note}</p>
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${t.person}</span>
-                            <span class="text-[8px] text-slate-300 font-medium italic">${formatFullDate(t.timestamp)}</span>
+            <div class="glass p-5 rounded-[2rem] flex justify-between items-center transition-all active:scale-95 border-l-4 ${isInc ? 'border-emerald-500' : 'border-rose-500'}">
+                <div class="flex items-center gap-4">
+                    <div class="flex flex-col">
+                        <p class="font-bold text-[13px] text-slate-100 leading-tight mb-1">${t.note}</p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] font-black text-indigo-400 uppercase tracking-widest">${t.person}</span>
+                            <span class="text-[8px] text-slate-500 font-medium">${formatFullDate(t.timestamp)}</span>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end gap-1">
-                    <p class="font-bold text-[14px] ${isInc ? 'text-emerald-600' : 'text-rose-600'} tabular-nums">
+                <div class="flex flex-col items-end gap-2">
+                    <p class="font-black text-[14px] ${isInc ? 'text-emerald-400' : 'text-rose-400'} tabular-nums">
                         ${isInc ? '+' : '-'}${amount.toLocaleString('id-ID')}
                     </p>
                     <div class="flex gap-1">
-                        <button onclick="prepareEdit(${t.id})" class="p-1.5 text-slate-200 hover:text-indigo-500 transition-colors">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button onclick="deleteData(${t.id})" class="p-1.5 text-slate-200 hover:text-rose-500 transition-colors">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
+                        <button onclick="prepareEdit(${t.id})" class="p-1.5 text-slate-600 hover:text-indigo-400"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onclick="deleteData(${t.id})" class="p-1.5 text-slate-600 hover:text-rose-400"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                     </div>
                 </div>
             </div>`;
     });
 
-    document.getElementById('total-income').innerText = 'Rp ' + totalInc.toLocaleString('id-ID');
-    document.getElementById('total-expense').innerText = 'Rp ' + totalExp.toLocaleString('id-ID');
-    document.getElementById('total-balance').innerText = 'Rp ' + (totalInc - totalExp).toLocaleString('id-ID');
-    updateChart(totalInc, totalExp);
+    document.getElementById('total-income').innerText = 'Rp ' + inc.toLocaleString('id-ID');
+    document.getElementById('total-expense').innerText = 'Rp ' + exp.toLocaleString('id-ID');
+    
+    // Percent Calculation for Middle Chart
+    const total = inc + exp;
+    const percent = total > 0 ? Math.round((inc / total) * 100) : 0;
+    document.getElementById('chart-percent').innerText = percent + '%';
+
+    updateChart(inc, exp);
 }
 
 function updateChart(inc, exp) {
-    const ctx = document.getElementById('financeChart');
+    const ctx = document.getElementById('financeChart').getContext('2d');
     if (myChart) myChart.destroy();
-    const chartData = (inc === 0 && exp === 0) ? [1, 0] : [inc, exp];
-    const chartColors = (inc === 0 && exp === 0) ? ['#f1f5f9', '#f1f5f9'] : ['#10b981', '#f43f5e'];
+
+    // Create Gradient
+    const gradientInc = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientInc.addColorStop(0, '#10b981');
+    gradientInc.addColorStop(1, '#059669');
+
+    const gradientExp = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientExp.addColorStop(0, '#f43f5e');
+    gradientExp.addColorStop(1, '#e11d48');
+
+    const chartData = (inc === 0 && exp === 0) ? [1, 0.01] : [inc, exp];
+    const colors = (inc === 0 && exp === 0) ? ['#1e293b', '#1e293b'] : [gradientInc, gradientExp];
+
     myChart = new Chart(ctx, {
         type: 'doughnut',
-        data: { datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, borderRadius: 10, spacing: 5 }] },
-        options: { cutout: '82%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+        data: {
+            datasets: [{
+                data: chartData,
+                backgroundColor: colors,
+                borderWidth: 0,
+                borderRadius: 20,
+                spacing: 10,
+                hoverOffset: 0
+            }]
+        },
+        options: {
+            cutout: '85%',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true, duration: 2000 }
+        }
     });
 }
 
-// --- CRUD OPERATIONS ---
-
-function prepareEdit(id) {
-    const t = transactions.find(x => x.id === id);
-    if (!t) return;
-    isEditing = true;
-    document.getElementById('edit-id').value = id;
-    document.getElementById('input-amount').value = t.amount;
-    document.getElementById('input-note').value = t.note;
-    document.getElementById('input-person').value = t.person;
-    document.getElementById('btn-save').innerText = "Update";
-    setType(t.type);
-    toggleModal();
-}
-
+// ... CRUD Operations (saveData, deleteData, prepareEdit) tetap menggunakan versi stabil Turso Anda ...
 async function saveData() {
     const btn = document.getElementById('btn-save');
     const amountVal = document.getElementById('input-amount').value;
     const noteVal = document.getElementById('input-note').value;
     const personVal = document.getElementById('input-person').value;
     const code = sessionStorage.getItem('vault_key');
-    if (!amountVal || !noteVal) return alert("Lengkapi data!");
+    if (!amountVal || !noteVal) return;
     const payload = { type: currentType, amount: parseInt(amountVal), person: personVal, note: noteVal, month: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' }) };
     if (isEditing) payload.id = document.getElementById('edit-id').value;
     btn.disabled = true;
     try {
         const res = await fetch('/api/transactions', { method: isEditing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify(payload) });
         if (res.ok) { closeModal(); fetchData(); }
-    } catch (e) { alert("Gagal menyimpan."); }
-    finally { btn.disabled = false; }
+    } catch (e) { alert("ERROR"); } finally { btn.disabled = false; }
 }
 
 async function deleteData(id) {
-    if (!confirm("Hapus data ini?")) return;
+    if (!confirm("DELETE?")) return;
     const code = sessionStorage.getItem('vault_key');
-    try {
-        await fetch('/api/transactions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify({ id }) });
-        fetchData();
-    } catch (e) { alert("Gagal menghapus."); }
+    await fetch('/api/transactions', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-access-code': code }, body: JSON.stringify({ id }) });
+    fetchData();
+}
+
+function prepareEdit(id) {
+    const t = transactions.find(x => x.id === id);
+    isEditing = true;
+    document.getElementById('edit-id').value = id;
+    document.getElementById('input-amount').value = t.amount;
+    document.getElementById('input-note').value = t.note;
+    document.getElementById('input-person').value = t.person;
+    document.getElementById('btn-save').innerText = "UPDATE";
+    setType(t.type);
+    toggleModal();
 }
 
 function setType(t) {
@@ -171,11 +176,11 @@ function setType(t) {
     const btnIn = document.getElementById('btn-in');
     const btnOut = document.getElementById('btn-out');
     if (t === 'Pemasukan') {
-        btnIn.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-white shadow-sm text-emerald-600";
-        btnOut.className = "flex-1 py-3 rounded-xl font-bold transition-all text-slate-500";
+        btnIn.className = "flex-1 py-3.5 rounded-xl font-black text-[10px] tracking-widest transition-all bg-indigo-600 text-white";
+        btnOut.className = "flex-1 py-3.5 rounded-xl font-black text-[10px] tracking-widest transition-all text-slate-500";
     } else {
-        btnOut.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-white shadow-sm text-rose-600";
-        btnIn.className = "flex-1 py-3 rounded-xl font-bold transition-all text-slate-500";
+        btnOut.className = "flex-1 py-3.5 rounded-xl font-black text-[10px] tracking-widest transition-all bg-rose-600 text-white";
+        btnIn.className = "flex-1 py-3.5 rounded-xl font-black text-[10px] tracking-widest transition-all text-slate-500";
     }
 }
 
@@ -185,7 +190,7 @@ function closeModal() {
     document.getElementById('edit-id').value = "";
     document.getElementById('input-amount').value = "";
     document.getElementById('input-note').value = "";
-    document.getElementById('btn-save').innerText = "Simpan";
+    document.getElementById('btn-save').innerText = "CONFIRM";
     toggleModal();
 }
 
