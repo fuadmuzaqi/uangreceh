@@ -1,265 +1,166 @@
-/**
- * Uang Receh - Script Utama
- * Pengelola Keuangan Keluarga Fuad & Laili
- */
-
 let transactions = [];
 let currentType = 'Pemasukan';
 let myChart = null;
+let isEditing = false;
 
-// 1. Inisialisasi & PWA Registration
 document.addEventListener('DOMContentLoaded', () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => console.log("SW failed"));
-    }
-    
-    // Cek jika user sudah login sebelumnya di sesi ini
-    const savedCode = sessionStorage.getItem('vault_key');
-    if (savedCode) {
+    const saved = sessionStorage.getItem('vault_key');
+    if (saved) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('main-content').classList.remove('hidden');
         fetchData();
     }
 });
 
-// 2. Sistem Autentikasi (Server-side check)
 async function checkAuth() {
-    const inputCode = document.getElementById('access-code').value;
-    if (!inputCode) return alert("Masukkan kode dulu, Bos!");
-
-    try {
-        const res = await fetch('/api/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: inputCode })
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            sessionStorage.setItem('vault_key', inputCode);
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-content').classList.remove('hidden');
-            fetchData();
-        } else {
-            alert("Kode salah! Coba ingat-ingat lagi.");
-        }
-    } catch (e) {
-        alert("Gagal terhubung ke server.");
+    const code = document.getElementById('access-code').value;
+    const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    if (data.success) {
+        sessionStorage.setItem('vault_key', code);
+        location.reload();
+    } else {
+        alert("Kode salah!");
     }
 }
 
-// 3. Ambil Data dari Turso
 async function fetchData() {
     const code = sessionStorage.getItem('vault_key');
-    try {
-        const res = await fetch('/api/transactions', {
-            headers: { 'x-access-code': code }
-        });
-
-        if (res.status === 401) {
-            alert("Sesi habis, silakan login ulang.");
-            sessionStorage.clear();
-            location.reload();
-            return;
-        }
-
-        transactions = await res.json();
-        updateUI();
-    } catch (e) {
-        console.error("Fetch error:", e);
-    }
+    const res = await fetch('/api/transactions', { headers: { 'x-access-code': code } });
+    if (res.status === 401) return location.reload();
+    transactions = await res.json();
+    updateUI();
 }
 
-// 4. Update Tampilan (UI)
 function updateUI() {
     const list = document.getElementById('transaction-list');
     const filter = document.getElementById('month-filter');
-    let totalInc = 0;
-    let totalExp = 0;
+    let totalInc = 0, totalExp = 0;
 
-    // Reset List & Filter
-    list.innerHTML = "";
     const months = [...new Set(transactions.map(t => t.month))];
-    
-    // Update Dropdown Filter Bulan (Folder)
-    const currentFilter = filter.value || "Semua Waktu";
+    const currentMonth = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+    const currentFilter = filter.value || (months.includes(currentMonth) ? currentMonth : months[0] || "Semua Waktu");
+
     filter.innerHTML = `<option value="Semua Waktu">Semua Waktu</option>`;
-    months.forEach(m => {
-        filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m}</option>`;
-    });
+    months.forEach(m => filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m}</option>`);
 
-    // Filter Data Berdasarkan Bulan
-    const displayData = currentFilter === "Semua Waktu" 
-        ? transactions 
-        : transactions.filter(t => t.month === currentFilter);
+    const displayData = currentFilter === "Semua Waktu" ? transactions : transactions.filter(t => t.month === currentFilter);
+    list.innerHTML = "";
 
-    // Hitung Total & Render Item
     displayData.forEach(t => {
-        const amount = Number(t.amount);
         const isInc = t.type === 'Pemasukan';
-        
-        if (isInc) totalInc += amount;
-        else totalExp += amount;
-
-        const date = new Date(t.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+        if (isInc) totalInc += Number(t.amount); else totalExp += Number(t.amount);
 
         list.innerHTML += `
-            <div class="flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm border border-slate-50 transition-all active:scale-[0.98]">
-                <div class="flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${isInc ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
+            <div class="flex justify-between items-center bg-white p-4 rounded-3xl shadow-sm border border-slate-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center ${isInc ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
                         ${isInc ? '➕' : '➖'}
                     </div>
                     <div>
-                        <p class="font-bold text-slate-800 leading-tight">${t.note}</p>
-                        <p class="text-[11px] text-slate-400 font-medium uppercase mt-0.5">${date} • ${t.person}</p>
+                        <p class="font-bold text-slate-800 text-sm leading-tight">${t.note}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">${t.person}</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="font-bold text-base ${isInc ? 'text-emerald-600' : 'text-rose-600'}">
-                        ${isInc ? '+' : '-'}${amount.toLocaleString('id-ID')}
-                    </p>
-                    <button onclick="deleteData(${t.id})" class="text-[10px] font-bold text-slate-300 hover:text-rose-500 uppercase tracking-tighter">Hapus</button>
+                <div class="flex items-center gap-3">
+                    <p class="font-bold text-sm ${isInc ? 'text-emerald-600' : 'text-rose-600'}">${Number(t.amount).toLocaleString('id-ID')}</p>
+                    <div class="flex gap-1 border-l pl-2 border-slate-100">
+                        <button onclick="prepareEdit(${t.id})" class="p-1 text-slate-300 hover:text-indigo-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button onclick="deleteData(${t.id})" class="p-1 text-slate-300 hover:text-rose-600">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
 
-    // Update Header & Chart
-    document.getElementById('total-income').innerText = formatRupiah(totalInc);
-    document.getElementById('total-expense').innerText = formatRupiah(totalExp);
-    document.getElementById('total-balance').innerText = formatRupiah(totalInc - totalExp);
-    
+    document.getElementById('total-income').innerText = 'Rp ' + totalInc.toLocaleString('id-ID');
+    document.getElementById('total-expense').innerText = 'Rp ' + totalExp.toLocaleString('id-ID');
+    document.getElementById('total-balance').innerText = 'Rp ' + (totalInc - totalExp).toLocaleString('id-ID');
     updateChart(totalInc, totalExp);
 }
 
-// 5. Simpan Data Baru
-async function saveData() {
-    const btn = document.getElementById('btn-save');
-    const amount = document.getElementById('input-amount').value;
-    const person = document.getElementById('input-person').value;
-    const note = document.getElementById('input-note').value;
-    const code = sessionStorage.getItem('vault_key');
-    
-    // Penentuan bulan otomatis (folder)
-    const month = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
-
-    if (!amount || !note) return alert("Data harus lengkap, ya!");
-
-    btn.innerText = "Menyimpan...";
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/api/transactions', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-access-code': code 
-            },
-            body: JSON.stringify({ type: currentType, amount: parseInt(amount), person, note, month })
-        });
-
-        if (res.ok) {
-            toggleModal();
-            fetchData();
-            // Reset fields
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-note').value = '';
-        } else {
-            alert("Gagal menyimpan ke database.");
-        }
-    } catch (e) {
-        alert("Terjadi kesalahan jaringan.");
-    } finally {
-        btn.innerText = "Simpan";
-        btn.disabled = false;
-    }
-}
-
-// 6. Hapus Data
-async function deleteData(id) {
-    if (!confirm("Hapus catatan ini?")) return;
-    const code = sessionStorage.getItem('vault_key');
-    
-    try {
-        await fetch('/api/transactions', {
-            method: 'DELETE',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-access-code': code 
-            },
-            body: JSON.stringify({ id })
-        });
-        fetchData();
-    } catch (e) {
-        alert("Gagal menghapus.");
-    }
-}
-
-// 7. Helper Functions
-function formatRupiah(num) {
-    return new Intl.NumberFormat('id-ID', { 
-        style: 'currency', 
-        currency: 'IDR', 
-        maximumFractionDigits: 0 
-    }).format(num);
-}
-
-function setType(type) {
-    currentType = type;
-    const btnIn = document.getElementById('btn-in');
-    const btnOut = document.getElementById('btn-out');
-    if (type === 'Pemasukan') {
-        btnIn.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-white shadow-sm text-emerald-600";
-        btnOut.className = "flex-1 py-3 rounded-xl font-bold transition-all text-slate-500";
-    } else {
-        btnOut.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-white shadow-sm text-rose-600";
-        btnIn.className = "flex-1 py-3 rounded-xl font-bold transition-all text-slate-500";
-    }
-}
-
-function toggleModal() {
-    const modal = document.getElementById('modal');
-    modal.classList.toggle('hidden');
-}
-
 function updateChart(inc, exp) {
-    const ctx = document.getElementById('financeChart').getContext('2d');
+    const ctx = document.getElementById('financeChart');
     if (myChart) myChart.destroy();
-    
-    // Jika tidak ada data, tampilkan placeholder
-    const dataValues = (inc === 0 && exp === 0) ? [1, 0] : [inc, exp];
-    const colors = (inc === 0 && exp === 0) ? ['#f1f5f9', '#f1f5f9'] : ['#10b981', '#f43f5e'];
-
     myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['Masuk', 'Keluar'],
             datasets: [{
-                data: dataValues,
-                backgroundColor: colors,
-                borderWidth: 0,
-                hoverOffset: 0,
-                borderRadius: 15,
-                spacing: 8
+                data: [inc || 1, exp || 0],
+                backgroundColor: [inc === 0 && exp === 0 ? '#f1f5f9' : '#10b981', '#f43f5e'],
+                borderWidth: 0, borderRadius: 10, spacing: 5
             }]
         },
-        options: {
-            cutout: '82%',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    enabled: inc !== 0 || exp !== 0,
-                    callbacks: {
-                        label: (item) => ` ${item.label}: ${formatRupiah(item.raw)}`
-                    }
-                }
-            }
-        }
+        options: { cutout: '80%', plugins: { legend: { display: false } } }
     });
 }
 
-// Event Listener untuk filter bulan
+function prepareEdit(id) {
+    const t = transactions.find(item => item.id === id);
+    isEditing = true;
+    document.getElementById('edit-id').value = id;
+    document.getElementById('input-amount').value = t.amount;
+    document.getElementById('input-note').value = t.note;
+    document.getElementById('input-person').value = t.person;
+    document.getElementById('btn-save').innerText = "Update";
+    setType(t.type);
+    toggleModal();
+}
+
+async function saveData() {
+    const btn = document.getElementById('btn-save');
+    const payload = {
+        type: currentType,
+        amount: document.getElementById('input-amount').value,
+        person: document.getElementById('input-person').value,
+        note: document.getElementById('input-note').value,
+        month: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
+    };
+    if (isEditing) payload.id = document.getElementById('edit-id').value;
+
+    btn.disabled = true;
+    const res = await fetch('/api/transactions', {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-access-code': sessionStorage.getItem('vault_key') },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) closeModal() || fetchData();
+}
+
+async function deleteData(id) {
+    if (!confirm("Hapus data?")) return;
+    await fetch('/api/transactions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-access-code': sessionStorage.getItem('vault_key') },
+        body: JSON.stringify({ id })
+    });
+    fetchData();
+}
+
+function setType(t) {
+    currentType = t;
+    const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
+    btnIn.className = `flex-1 py-3 rounded-xl font-bold transition-all ${t === 'Pemasukan' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500'}`;
+    btnOut.className = `flex-1 py-3 rounded-xl font-bold transition-all ${t === 'Pengeluaran' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-500'}`;
+}
+
+function toggleModal() { document.getElementById('modal').classList.toggle('hidden'); }
+function closeModal() {
+    isEditing = false;
+    document.getElementById('edit-id').value = "";
+    document.getElementById('input-amount').value = "";
+    document.getElementById('input-note').value = "";
+    document.getElementById('btn-save').innerText = "Simpan";
+    toggleModal();
+}
+
 document.getElementById('month-filter').addEventListener('change', updateUI);
