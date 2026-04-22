@@ -2,13 +2,8 @@
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/api/config",
-      "destination": "/api/config.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/public/$1"
-    }
+    { "source": "/api/auth", "destination": "/api/auth.js" },
+    { "source": "/api/transactions", "destination": "/api/transactions.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
