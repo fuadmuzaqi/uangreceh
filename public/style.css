@@ -1,0 +1,80 @@
+/* Import Font Premium (Inter & Poppins) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@400;600&display=swap');
+
+:root {
+    --primary: #4f46e5; /* Indigo 600 */
+    --success: #10b981; /* Emerald 500 */
+    --danger: #ef4444;  /* Red 500 */
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #f9fafb;
+}
+
+h1, h2, h3, .font-poppins {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Animasi Slide Up untuk Modal */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Kustomisasi Scrollbar (Halus) */
+::-webkit-scrollbar {
+    width: 4px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+/* Glassmorphism Effect untuk Header */
+header {
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Input Styling */
+input:focus, select:focus {
+    transition: all 0.3s ease;
+}
+
+/* Card Hover Effect */
+.transaction-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.transaction-card:active {
+    transform: scale(0.98);
+}
+
+/* Floating Action Button Shadow */
+.fab-shadow {
+    box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+}
+
+/* Styling untuk Folder Rincian per Bulan */
+.month-group-header {
+    position: sticky;
+    top: 80px;
+    background: #f9fafb;
+    padding: 8px 0;
+    z-index: 5;
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
