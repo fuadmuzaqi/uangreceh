@@ -14,58 +14,43 @@ export default async function handler(req, res) {
   }
 
   try {
+    // AMBIL DATA
     if (method === 'GET') {
       const result = await client.execute("SELECT * FROM transactions ORDER BY id DESC");
       return res.status(200).json(result.rows);
     } 
 
+    // TAMBAH DATA
     if (method === 'POST') {
       const { type, amount, person, note, month } = req.body;
-      
-      // Menggunakan query string langsung untuk meminimalisir overhead protokol
-      const query = {
+      await client.execute({
         sql: "INSERT INTO transactions (type, amount, person, note, month) VALUES (?, ?, ?, ?, ?)",
         args: [type, parseInt(amount), person, note, month]
-      };
-      
-      await client.execute(query);
+      });
       return res.status(201).json({ success: true });
     }
-// ... (Bagian atas tetap sama seperti sebelumnya)
 
+    // UPDATE DATA (EDIT)
     if (method === 'PUT') {
       const { id, type, amount, person, note, month } = req.body;
-      await queryTurso([
-        { 
-          type: "execute", 
-          stmt: { 
-            sql: "UPDATE transactions SET type = ?, amount = ?, person = ?, note = ?, month = ? WHERE id = ?",
-            args: [
-              { type: "text", value: type },
-              { type: "integer", value: String(amount) },
-              { type: "text", value: person },
-              { type: "text", value: note },
-              { type: "text", value: month },
-              { type: "integer", value: String(id) }
-            ]
-          } 
-        },
-        { type: "close" }
-      ]);
+      await client.execute({
+        sql: "UPDATE transactions SET type = ?, amount = ?, person = ?, note = ?, month = ? WHERE id = ?",
+        args: [type, parseInt(amount), person, note, month, parseInt(id)]
+      });
       return res.status(200).json({ success: true });
     }
 
-// ... (Bagian DELETE dan error handling tetap sama)
+    // HAPUS DATA
     if (method === 'DELETE') {
       const { id } = req.body;
       await client.execute({
         sql: "DELETE FROM transactions WHERE id = ?",
-        args: [id]
+        args: [parseInt(id)]
       });
       return res.status(200).json({ success: true });
     }
   } catch (error) {
-    console.error("Database Error Detail:", error);
+    console.error("Database Error:", error);
     return res.status(500).json({ error: error.message });
   }
 }
