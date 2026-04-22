@@ -4,8 +4,8 @@ let myChart = null;
 let isEditing = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const saved = sessionStorage.getItem('vault_key');
-    if (saved) {
+    const savedCode = sessionStorage.getItem('vault_key');
+    if (savedCode) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('main-content').classList.remove('hidden');
         fetchData();
@@ -30,10 +30,12 @@ async function checkAuth() {
 
 async function fetchData() {
     const code = sessionStorage.getItem('vault_key');
-    const res = await fetch('/api/transactions', { headers: { 'x-access-code': code } });
-    if (res.status === 401) return location.reload();
-    transactions = await res.json();
-    updateUI();
+    try {
+        const res = await fetch('/api/transactions', { headers: { 'x-access-code': code } });
+        if (res.status === 401) return location.reload();
+        transactions = await res.json();
+        updateUI();
+    } catch (e) { console.error("Gagal ambil data", e); }
 }
 
 function updateUI() {
@@ -41,22 +43,26 @@ function updateUI() {
     const filter = document.getElementById('month-filter');
     let totalInc = 0, totalExp = 0;
 
+    // Ambil daftar bulan untuk dropdown
     const months = [...new Set(transactions.map(t => t.month))];
     const currentMonth = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
     const currentFilter = filter.value || (months.includes(currentMonth) ? currentMonth : months[0] || "Semua Waktu");
 
     filter.innerHTML = `<option value="Semua Waktu">Semua Waktu</option>`;
-    months.forEach(m => filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m}</option>`);
+    months.forEach(m => {
+        filter.innerHTML += `<option value="${m}" ${currentFilter === m ? 'selected' : ''}>${m}</option>`;
+    });
 
     const displayData = currentFilter === "Semua Waktu" ? transactions : transactions.filter(t => t.month === currentFilter);
     list.innerHTML = "";
 
     displayData.forEach(t => {
         const isInc = t.type === 'Pemasukan';
-        if (isInc) totalInc += Number(t.amount); else totalExp += Number(t.amount);
+        const amount = Number(t.amount);
+        if (isInc) totalInc += amount; else totalExp += amount;
 
         list.innerHTML += `
-            <div class="flex justify-between items-center bg-white p-4 rounded-3xl shadow-sm border border-slate-50">
+            <div class="flex justify-between items-center bg-white p-4 rounded-3xl shadow-sm border border-slate-50 mb-3">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center ${isInc ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
                         ${isInc ? '➕' : '➖'}
@@ -67,13 +73,13 @@ function updateUI() {
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <p class="font-bold text-sm ${isInc ? 'text-emerald-600' : 'text-rose-600'}">${Number(t.amount).toLocaleString('id-ID')}</p>
+                    <p class="font-bold text-sm ${isInc ? 'text-emerald-600' : 'text-rose-600'}">${amount.toLocaleString('id-ID')}</p>
                     <div class="flex gap-1 border-l pl-2 border-slate-100">
                         <button onclick="prepareEdit(${t.id})" class="p-1 text-slate-300 hover:text-indigo-600">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         <button onclick="deleteData(${t.id})" class="p-1 text-slate-300 hover:text-rose-600">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </div>
                 </div>
@@ -105,6 +111,7 @@ function updateChart(inc, exp) {
 
 function prepareEdit(id) {
     const t = transactions.find(item => item.id === id);
+    if(!t) return;
     isEditing = true;
     document.getElementById('edit-id').value = id;
     document.getElementById('input-amount').value = t.amount;
@@ -117,30 +124,36 @@ function prepareEdit(id) {
 
 async function saveData() {
     const btn = document.getElementById('btn-save');
+    const code = sessionStorage.getItem('vault_key');
     const payload = {
         type: currentType,
-        amount: document.getElementById('input-amount').value,
+        amount: parseInt(document.getElementById('input-amount').value),
         person: document.getElementById('input-person').value,
         note: document.getElementById('input-note').value,
         month: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
     };
+
     if (isEditing) payload.id = document.getElementById('edit-id').value;
+    if (!payload.amount || !payload.note) return alert("Lengkapi data!");
 
     btn.disabled = true;
-    const res = await fetch('/api/transactions', {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-access-code': sessionStorage.getItem('vault_key') },
-        body: JSON.stringify(payload)
-    });
-
-    if (res.ok) closeModal() || fetchData();
+    try {
+        const res = await fetch('/api/transactions', {
+            method: isEditing ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-access-code': code },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) closeModal() || fetchData();
+    } catch (e) { alert("Gagal menyimpan"); }
+    finally { btn.disabled = false; }
 }
 
 async function deleteData(id) {
     if (!confirm("Hapus data?")) return;
+    const code = sessionStorage.getItem('vault_key');
     await fetch('/api/transactions', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'x-access-code': sessionStorage.getItem('vault_key') },
+        headers: { 'Content-Type': 'application/json', 'x-access-code': code },
         body: JSON.stringify({ id })
     });
     fetchData();
