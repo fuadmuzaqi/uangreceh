@@ -1,6 +1,5 @@
 import { createClient } from '@libsql/client';
 
-// Inisialisasi client di luar handler agar bisa digunakan kembali (warm start)
 const client = createClient({
   url: process.env.TURSO_DATABASE_URL,
   authToken: process.env.TURSO_AUTH_TOKEN,
@@ -23,13 +22,13 @@ export default async function handler(req, res) {
     if (method === 'POST') {
       const { type, amount, person, note, month } = req.body;
       
-      // Gunakan execute biasa tanpa 'args' jika masih ada kendala, 
-      // tapi format ini adalah yang paling standar & aman:
-      await client.execute({
+      // Menggunakan query string langsung untuk meminimalisir overhead protokol
+      const query = {
         sql: "INSERT INTO transactions (type, amount, person, note, month) VALUES (?, ?, ?, ?, ?)",
         args: [type, parseInt(amount), person, note, month]
-      });
+      };
       
+      await client.execute(query);
       return res.status(201).json({ success: true });
     }
 
@@ -42,8 +41,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
   } catch (error) {
-    // Log error lengkap di Vercel untuk debugging
-    console.error("Database Error:", error);
+    console.error("Database Error Detail:", error);
     return res.status(500).json({ error: error.message });
   }
 }
