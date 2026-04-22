@@ -1,76 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FuadEli Finance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Uang Receh</title>
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2344/2344132.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="style.css" rel="stylesheet">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-[#F8F9FD] text-slate-900 font-sans antialiased">
 
-    <div id="login-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6">
-        <h1 class="text-2xl font-bold mb-6 text-indigo-600">FuadEli Finance</h1>
-        <input type="password" id="access-code" placeholder="Masukkan Kode Akses" class="border-2 border-gray-200 rounded-lg p-3 w-full max-w-xs mb-4 focus:border-indigo-500 outline-none">
-        <button onclick="checkAuth()" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold shadow-lg">Masuk</button>
+    <div id="login-screen" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-8">
+        <div class="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-indigo-200">
+            <span class="text-3xl">💰</span>
+        </div>
+        <h1 class="text-3xl font-bold mb-2">Uang Receh</h1>
+        <p class="text-slate-400 mb-8">Catatan Keuangan Fuad & Laili</p>
+        <div class="w-full max-w-xs">
+            <input type="password" id="access-code" placeholder="Kode Akses" class="w-full bg-slate-100 rounded-2xl p-4 mb-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-center tracking-widest">
+            <button onclick="checkAuth()" class="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">Masuk</button>
+        </div>
     </div>
 
-    <div id="main-content" class="hidden max-w-md mx-auto pb-24">
-        <header class="p-6 bg-white shadow-sm sticky top-0 z-10">
-            <h2 class="text-xl font-bold text-gray-700">Ringkasan Bulan Ini</h2>
-            <div class="mt-4 bg-indigo-600 rounded-2xl p-6 text-white shadow-xl">
-                <p class="text-sm opacity-80">Total Saldo</p>
-                <h3 id="total-balance" class="text-3xl font-bold mt-1">Rp 0</h3>
+    <div id="main-content" class="hidden max-w-md mx-auto min-h-screen pb-24">
+        <header class="p-6 pt-10">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-slate-400 text-sm font-medium">Total Saldo</h2>
+                    <h3 id="total-balance" class="text-3xl font-bold text-slate-900 tracking-tight">Rp 0</h3>
+                </div>
+                <div class="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-xl">✨</div>
             </div>
-        </header>
-
-        <section class="p-6">
-            <div class="bg-white p-4 rounded-2xl shadow-sm mb-6">
-                <canvas id="financeChart" class="max-h-64"></canvas>
+            
+            <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 mb-6">
+                <canvas id="financeChart" class="max-h-48"></canvas>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-green-100 p-4 rounded-xl">
-                    <p class="text-xs text-green-600 font-bold uppercase">Pemasukan</p>
-                    <p id="total-income" class="text-lg font-bold text-green-700">Rp 0</p>
+                <div class="bg-emerald-50 p-5 rounded-[1.5rem] border border-emerald-100">
+                    <p class="text-emerald-600 text-xs font-bold uppercase mb-1">Masuk</p>
+                    <p id="total-income" class="text-lg font-bold text-emerald-700">Rp 0</p>
                 </div>
-                <div class="bg-red-100 p-4 rounded-xl">
-                    <p class="text-xs text-red-600 font-bold uppercase">Pengeluaran</p>
-                    <p id="total-expense" class="text-lg font-bold text-red-700">Rp 0</p>
+                <div class="bg-rose-50 p-5 rounded-[1.5rem] border border-rose-100">
+                    <p class="text-rose-600 text-xs font-bold uppercase mb-1">Keluar</p>
+                    <p id="total-expense" class="text-lg font-bold text-rose-700">Rp 0</p>
                 </div>
             </div>
-        </section>
+        </header>
 
-        <section class="px-6">
+        <section class="px-6 mt-2">
             <div class="flex justify-between items-center mb-4">
-                <h4 class="font-bold">Rincian Transaksi</h4>
-                <select id="month-filter" class="text-sm bg-transparent border-none outline-none text-indigo-600 font-semibold">
-                    </select>
+                <h4 class="font-bold text-lg">Riwayat</h4>
+                <select id="month-filter" class="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full outline-none">
+                    <option>Semua Waktu</option>
+                </select>
             </div>
-            <div id="transaction-list" class="space-y-3">
+            <div id="transaction-list" class="space-y-4">
                 </div>
         </section>
 
-        <button onclick="toggleModal()" class="fixed bottom-6 right-6 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-2xl text-3xl">+</button>
+        <button onclick="toggleModal()" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl font-bold flex items-center gap-2 active:scale-95 transition-all z-40">
+            <span class="text-xl">+</span> Tambah
+        </button>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-end">
-        <div class="bg-white w-full rounded-t-3xl p-8 transform transition-transform animate-slide-up">
-            <h3 class="text-xl font-bold mb-4 text-center">Tambah Catatan</h3>
-            <div class="space-y-4">
-                <div class="flex bg-gray-100 rounded-lg p-1">
-                    <button id="btn-in" onclick="setType('Pemasukan')" class="flex-1 py-2 rounded-md font-bold transition bg-white shadow text-green-600">Pemasukan</button>
-                    <button id="btn-out" onclick="setType('Pengeluaran')" class="flex-1 py-2 rounded-md font-bold transition text-gray-500">Pengeluaran</button>
+    <div id="modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 flex items-end">
+        <div class="bg-white w-full rounded-t-[2.5rem] p-8 animate-slide-up shadow-2xl">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
+            <div class="space-y-5">
+                <div class="flex bg-slate-100 rounded-2xl p-1.5">
+                    <button id="btn-in" onclick="setType('Pemasukan')" class="flex-1 py-3 rounded-xl font-bold transition-all bg-white shadow-sm text-emerald-600">Pemasukan</button>
+                    <button id="btn-out" onclick="setType('Pengeluaran')" class="flex-1 py-3 rounded-xl font-bold transition-all text-slate-500">Pengeluaran</button>
                 </div>
-                <input type="number" id="input-amount" placeholder="Nominal (Rp)" class="w-full border-b-2 border-gray-100 py-3 text-2xl font-bold outline-none focus:border-indigo-500">
-                <select id="input-person" class="w-full border-b-2 border-gray-100 py-3 outline-none">
-                    <option value="Fuad">Fuad</option>
-                    <option value="Laili">Laili</option>
-                </select>
-                <input type="text" id="input-note" placeholder="Keterangan (Contoh: Beli Token Listrik)" class="w-full border-b-2 border-gray-100 py-3 outline-none">
-                <button onclick="saveData()" id="btn-save" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg">Simpan Transaksi</button>
-                <button onclick="toggleModal()" class="w-full text-gray-400 py-2">Batal</button>
+                
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase ml-2">Nominal</label>
+                    <input type="number" id="input-amount" placeholder="0" class="w-full bg-transparent border-b-2 border-slate-100 py-4 text-4xl font-bold outline-none focus:border-indigo-500 transition-colors">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-2">Siapa?</label>
+                        <select id="input-person" class="w-full bg-slate-50 rounded-xl p-4 outline-none border-none mt-1">
+                            <option value="Fuad">Fuad</option>
+                            <option value="Laili">Laili</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-2">Keterangan</label>
+                        <input type="text" id="input-note" placeholder="Makan siang..." class="w-full bg-slate-50 rounded-xl p-4 outline-none border-none mt-1">
+                    </div>
+                </div>
+
+                <button onclick="saveData()" id="btn-save" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-lg shadow-lg shadow-indigo-100 mt-4">Simpan</button>
+                <button onclick="toggleModal()" class="w-full text-slate-400 font-medium py-2">Tutup</button>
             </div>
         </div>
     </div>
